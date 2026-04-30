@@ -1,13 +1,9 @@
 pipeline {
     agent any
 
-    environment {
-        DOCKER_IMAGE = "ireneaisha10/myapp"
-    }
-
     stages {
 
-        stage('Clone Repository') {
+        stage('Clone Repo') {
             steps {
                 git 'https://github.com/IreneAisha10/dockp.git'
             }
@@ -15,41 +11,26 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    docker.build("${DOCKER_IMAGE}:latest")
-                }
+                bat "docker build -t ireneaisha10/myapp ."
             }
         }
 
-        stage('Login to Docker Hub') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    bat "echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin"
-                }
-            }
-        }
+      stage('Push to Docker Hub') {
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub',
+        usernameVariable: 'USER',
+        passwordVariable: 'PASS')]) {
 
-        stage('Push Docker Image') {
-            steps {
-                script {
-                    docker.withRegistry('', 'dockerhub-creds') {
-                        docker.image("${DOCKER_IMAGE}:latest").push()
-                    }
-                }
-            }
+            bat "docker login -u %USER% -p %PASS%"
+            bat "docker push ireneaisha10/myapp:latest"
         }
     }
+}
 
-    post {
-        success {
-            echo 'Image successfully built and pushed to Docker Hub'
-        }
-        failure {
-            echo 'Pipeline failed'
+        stage('Run Container') {
+            steps {
+                bat "docker run ireneaisha10/myapp"
+            }
         }
     }
 }
